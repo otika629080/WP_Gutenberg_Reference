@@ -1,0 +1,5 @@
+# 参照資料一覧
+
+## ファイル構成
+[index.js ファイル](https://ja.wordpress.org/team/handbook/block-editor/getting-started/fundamentals/file-structure-of-a-block/#indexjs)
+- これはブロックのメインの JavaScript ファイルで、クライアントでのブロックの登録に使用されます。
