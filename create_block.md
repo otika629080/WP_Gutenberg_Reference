@@ -162,3 +162,131 @@ block.jsonファイルには、パフォーマンスの向上や、WordPressプ�
 - editorScript：エディタースクリプト定義
 - editorStyle：エディタースタイル定義
 - style：ブロックの代替スタイルを指定
+- 
+上のプロパティに加えて属性オブジェクトを定義でき、ブロックが保存するデータに関する情報を指定できます。block.jsonでは、キーと値のペアでいくつでも属性を設定できます。この時、キーは属性名、値は属性定義です。
+
+以下は属性定義の例です。
+
+```json
+"attributes": {
+	"content": {
+		"type": "array",
+		"source": "children",
+		"selector": "p"
+	},
+	"align": {
+		"type": "string",
+		"default": "none"
+	},
+	"link": { 
+		"type": "string", 
+		"default": "https://kinsta.com" 
+	}
+},
+```
+
+block.jsonファイルについてはこの記事の後半で詳しくご説明しますが、ブロックエディターハンドブックでも、block.jsonファイルのメタデータや属性について詳しく解説されていますので、参照してみてください。
+
+## srcフォルダ
+- index.js
+- edit.js
+- save.js
+- editor.scss
+- style.scss
+
+### index.js
+index.jsファイルは出発点です。依存関係をインポートし、ブロックタイプをクライアントに登録します。
+
+```json
+import { registerBlockType } from '@wordpress/blocks';
+
+import './style.scss';
+
+import Edit from './edit';
+import save from './save';
+import metadata from './block.json';
+
+registerBlockType( metadata.name, {
+	/**
+	 * @see ./edit.js
+	 */
+	edit: Edit,
+
+	/**
+	 * @see ./save.js
+	 */
+	save,
+} );
+```
+
+最初の文では、@wordpress/blocksパッケージからregisterBlockType関数をインポートしています。続くimport文は、スタイルシート、Edit関数、save関数をインポートしています。
+
+registerBlockType関数は、クライアントでコンポーネントを登録します。この関数は2つのパラメータを取ります。ブロック名の「名前空間/ブロック名」（サーバー上で登録されたものと同じ）とブロック構成オブジェクトです。
+
+Edit関数はブロックエディターで描画されるブロックインターフェースを定義し、save関数はシリアライズされてデータベースに保存される構造を定義します（詳しくはこちら）。
+
+### edit.js
+
+edit.jsでは、ブロック管理インターフェースを構築します。
+
+```js
+import { __ } from '@wordpress/i18n';
+import { useBlockProps } from '@wordpress/block-editor';
+import './editor.scss';
+
+export default function Edit() {
+	return (
+		<p {...useBlockProps()}>
+			{__('My First Block – hello from the editor!', 'my-first-block')}
+		</p>
+	);
+}
+```
+
+まず、@wordpress/i18nパッケージ（このパッケージには、JavaScript版の翻訳関数が含まれています）の__関数、useBlockProps Reactフック、editor.scssファイルをインポートしています。
+
+続いて、Reactコンポーネントをエクスポートします（詳細はimport文とexport文をご覧ください）。
+
+### save.js
+
+save.jsファイルでは、データベースに保存するブロック構造を構築します。
+
+```js
+import { __ } from '@wordpress/i18n';
+import { useBlockProps } from '@wordpress/block-editor';
+
+export default function save() {
+	return (
+		<p {...useBlockProps.save()}>
+			{__(
+				'My First Block – hello from the saved content!',
+				'my-first-block'
+			)}
+		</p>
+	);
+}
+```
+
+editor.scssとstyle.scss
+
+スクリプトとは別に、2つのSASSファイルがsrcフォルダに存在します。editor.scssファイルにはエディターのコンテキストでブロックに適用されるスタイルが含まれ、style.scssファイルにはフロントエンドとエディターでの表示用のブロックのスタイルが含まれます。これらのファイルについては、この記事の後半で掘り下げていきます。
+
+### node_modulesとbuildフォルダ
+node_modulesフォルダには、nodeモジュールとその依存関係が格納されています。nodeパッケージは、この記事で扱う範囲を超えるため深入りしませんが、npmがパッケージをインストールする場所については、この記事をご覧ください。
+
+buildフォルダには、ビルド処理で生成されたJSファイルとCSSファイルが格納されます。詳しいビルドプロセスについては、「ESNext構文」と「JavaScriptビルド環境のセットアップ」をご覧ください。
+
+## 実践─Gutenbergブロックを作成しよう
+
+それでは、実際にブロックを作っていきましょう。このセクションでは、CTA（コール・トゥ・アクション）ブロック、Kinsta Academyブロックを実装するプラグインの作成方法をご説明します。
+
+ブロックは2つのカラムで構成され、左側に画像、右側にテキストの段落があります。テキストの下には、編集可能なリンクが付いたボタンが配置されます。
+
+
+
+
+
+
+
+
+
