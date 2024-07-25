@@ -284,11 +284,66 @@ buildフォルダには、ビルド処理で生成されたJSファイルとCSS�
 
 ![custom-block-1](custom-block-1.jpg)
 
+これは簡単な例ですが、Gutenbergブロック開発の基本を網羅することができます。一通り理解できたら、ブロックエディターハンドブックなどのリソースを参照して、より複雑なGutenbergブロックを作ってみてください。
 
+今回は、ローカル開発環境で最新版のWordPressが稼働していることを前提とし、以下の順番でブロック開発をご紹介していきます。
 
+- スターターブロックプラグインのセットアップ
+- jsonの編集
+- 組み込みコンポーネントの使用─RichTextコンポーネント
+- ブロックツールバーへのコントロールの追加
+- ブロック設定サイドバーの編集
+- 外部リンクの追加と編集
+- 複数のブロックスタイルの追加
+- InnerBlocksコンポーネントを使用したブロックのネスト
+- 細かな編集
 
+では、始めましょう。
 
+### スターターブロックプラグインのセットアップ方法
 
+コマンドラインツールを起動して、/wp-content/pluginsフォルダに移動します。
 
+以下のコマンドを実行します。
 
+```sh
+npx @wordpress/create-block
+```
 
+このコマンドは対話モードで、ブロック登録用のPHP、SCSS、JSファイルを生成します。対話モードでは、ブロックに必要なデータを簡単に設定できます。この記事では、以下の値を使用します。
+
+- Template variant（テンプレート）：static（静的）
+- Block slug（ブロックのスラッグ）：ka-example-block
+  - WordPressのブロックエディタ（Gutenberg）で使用される、カスタムブロックの一意の識別子
+- Internal namespace（内部名前空間）：ka-example-block
+- Block display title（ブロック表示タイトル）：Kinsta Academy Block
+- Short block description（ブロックの説明）：An example block for Kinsta Academy students（Kinstaアカデミー受講者向けブロックの例）
+- Dashicon（アイコンフォント）：superhero-alt
+- Category name（カテゴリ名）：widgets
+- Do you want to customize the WordPress plugin?（WordPressプラグインを編集しますか？）：Yes
+- The home page of the plugin（プラグインのトップページ）：https://kinsta.com/
+- Current plugin version（現在のプラグインのバージョン）：1.0
+- Plugin author（プラグイン開発者名） ：自分の名前
+- License（ライセンス）：─
+- Link to the license text（ライセンステキストへのリンク）：─
+- Custom domain path for translation（翻訳用独自ドメインパス）：─
+
+  プラグインとすべての依存関係をインストールするには、数分かかります。
+
+  次に、/wp-content/pluginsフォルダから以下のコマンドを実行します。
+
+  ```sh
+  cd ka-example-block
+  ```
+
+  最後に、プラグインのフォルダ（この例ではka-example-block）から次のコマンドを入力して、開発を始めます。
+
+  ```sh
+  npm start
+  ```
+
+「プラグイン」画面を開き、「Kinsta Academy Block」プラグインを有効化してください。
+
+新しい投稿を作成し、ブロックインサーターを開き、「デザイン」カテゴリまでスクロールします。「Kinsta Academy Block」をクリックして、投稿に追加してください。
+
+### block.jsonの編集
