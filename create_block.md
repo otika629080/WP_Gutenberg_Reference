@@ -347,3 +347,102 @@ npx @wordpress/create-block
 新しい投稿を作成し、ブロックインサーターを開き、「デザイン」カテゴリまでスクロールします。「Kinsta Academy Block」をクリックして、投稿に追加してください。
 
 ### block.jsonの編集
+
+前述したように、サーバーサイドのブロック登録はメインの.phpファイルで行われます。しかし、ここでは.phpファイル内で設定を定義しません。代わりに、block.jsonファイルを使用します。
+
+もう一度block.jsonを開いて、デフォルトの設定を詳しく見てみましょう。
+
+```json
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 2,
+	"name": "ka-example-block/ka-example-block",
+	"version": "0.1.0",
+	"title": "Kinsta Academy Block",
+	"category": "widgets",
+	"icon": "superhero-alt",
+	"description": "An example block for Kinsta Academy students",
+	"supports": {
+		"html": false
+	},
+	"textdomain": "ka-example-block",
+	"editorScript": "file:./index.js",
+	"editorStyle": "file:./index.css",
+	"style": "file:./style-index.css"
+}
+```
+
+### スクリプトとスタイル
+editorScript、editorStyle、styleプロパティには、フロントエンドとバックエンドのスクリプトとスタイルへの相対パスを指定します。
+
+ここで定義したスクリプトとスタイルは、WordPressによって自動的に登録され、キューに入れられるため、手動で登録する必要はありません。
+
+buildフォルダ内のindex.jsスクリプトは、正しくキューに入れられています。PHPコードを記述する必要はありません。
+
+### UIラベル
+titleとdescriptionプロパティには、エディター上でのブロックの識別に必要なラベルを指定します。
+
+### キーワード
+前述したように、プロパティと属性を使用してブロックを設定できます。例えば、1つ以上のkeywordsを追加して、ブロックを検索しやすくできます。
+
+```json
+"keywords": [ 
+	"kinsta", 
+	"academy", 
+	"superhero"
+      ],
+```
+
+クイックインサーターに「kinsta」「academy」または「superhero」を入力すると、エディターに「Kinsta Academy」ブロックが表示されます。
+
+### ローカライズ
+
+JSONファイル内の文字列をローカライズする方法については、こちらをご覧ください。
+
+JavaScript内では、@wordpress/blocksパッケージのregisterBlockTypeFromMetadataメソッドと、block.jsonファイルから読み込んだメタデータを使用して、ブロックタイプを登録できるようになりました。すべてのローカライズされたプロパティは、PHPのregister_block_type_from_metadataと同様に、自動的に_x（@wordpress/i18nパッケージ）関数呼び出しにラップされます。唯一の要件として、block.jsonファイルにtextdomainプロパティを設定してください。
+
+ここでは、registerBlockTypeFromMetadataの代わりにregisterBlockType関数を使用します。Gutenberg 10.7以降、registerBlockTypeFromMetadataが非推奨になったためですが、仕組みは同じです。
+
+### 組み込みコンポーネントの使用─RichTextコンポーネント
+
+Gutenbergブロックを構成する要素は、Reactコンポーネントであり、wpグローバル変数でアクセスできます。例えば、ブラウザのコンソールにwp.editorと入力すると、wp.editorモジュールに含まれるコンポーネントの一覧が表示されます。(外観>エディタで、サイドバーを表示している場合)
+
+リストをスクロールして、コンポーネントの名前から中身を推測してみてください。
+
+同様に、wp.componentsモジュールに含まれるコンポーネントの一覧を確認できます。
+
+Info
+モジュールプログラミングは、ソフトウェア設計技法の1つで、プログラムの機能を、独立した交換可能なモジュールに分離します。各モジュールには、機能の特定部分の実行に必要なコードのみが含まれます（出典：Wikipedia）。
+
+edit.jsファイルに戻り、スクリプトを詳しく見てみましょう。
+
+```js
+import { __ } from '@wordpress/i18n';
+import { useBlockProps } from '@wordpress/block-editor';
+import './editor.scss';
+
+export default function Edit() {
+	return (
+		<p { ...useBlockProps() }>
+			{ __(
+				'Kinsta Academy Block – hello from the editor!',
+				'ka-example-block'
+			) }
+		</p>
+	);
+}
+```
+
+このコードは、シンプルで編集できないテキストを含む静的ブロックを生成しますが、簡単に変更できます。
+
+テキストを編集可能にするには、現在の<p>タグを、入力内容を編集できるコンポーネントで置き換えます。Gutenbergには、この目的で使用できる組み込みのRichTextコンポーネントがあります。
+
+組み込みコンポーネントは、5つのステップでブロックに追加できます。
+
+1. WordPressパッケージから必要なコンポーネントをインポートする
+2. JSXコードに対応する要素を追加する
+3. block.jsonファイルに必要な属性を定義する
+4. イベントハンドラを定義する
+5. データを保存する
+
+#### ステップ1. WordPressパッケージから必要なコンポーネントをインポートする
