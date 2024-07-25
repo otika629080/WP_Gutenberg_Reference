@@ -446,3 +446,440 @@ export default function Edit() {
 5. データを保存する
 
 #### ステップ1. WordPressパッケージから必要なコンポーネントをインポートする
+
+edit.jsファイルを開き、import文を変更します。
+
+```js
+import { useBlockProps } from '@wordpress/block-editor';
+```
+
+上のimport文を以下のように変更してください。
+
+```js
+import { useBlockProps, RichText } from '@wordpress/block-editor';
+```
+
+@wordpress/block-editorパッケージから、useBlockProps関数とRichTextコンポーネントをインポートしています。
+
+#### useBlockProps
+useBlockProps Reactフックは、ブロックのラッパー要素をマークします。
+
+APIバージョン2を使用するには、ブロックのedit関数内で新しいuseBlockPropsフックを使用して、ブロックのラッパー要素をマークする必要があります。useBlockPropsフックは、ブロックの動作の有効化に必要な属性とイベントハンドラを挿入します。ブロック要素にはuseBlockPropsを介して属性を渡し、戻り値は要素に展開する必要があります。
+
+つまり、useBlockPropsは、ラッパー要素（この例ではp要素）に自動的に属性とクラスを割り当てます。
+
+ラッパー要素からuseBlockPropsを削除すると、単純なテキスト文字列になってしまい、ブロックの機能やスタイルにアクセスできません。
+
+後で触れますが、useBlockPropsには、プロパティのオブジェクトを渡しても、出力をカスタマイズできます。
+
+#### RichText
+
+RichTextコンポーネントには編集可能な入力領域があり、ユーザーはコンテンツを編集し、書式を設定できます。
+
+GitHubのRichTextコンポーネントのドキュメントをご覧ください。
+
+### ステップ2. JSXコードに対応する要素を追加する
+
+```jsx
+const blockProps = useBlockProps();
+
+return (
+	<RichText 
+		{ ...blockProps }
+		tagName="p"
+		onChange={ onChangeContent }
+		allowedFormats={ [ 'core/bold', 'core/italic' ] }
+		value={ attributes.content }
+		placeholder={ __( 'Write your text...' ) }
+	/>
+);
+```
+
+各行は以下の通りです。
+
+- tagName：編集可能なHTML要素のタグ名
+- onChange：要素の内容が変更されたときに呼び出される関数
+- allowedFormats：許可されるフォーマットの配列（デフォルトでは、すべてのフォーマットが許可されます）
+- value：編集可能になるHTML文字列
+- placeholder：要素が空のときに表示されるプレースホルダテキスト
+
+### ステップ3. block.jsonファイルに必要な属性を定義する
+
+属性は、リッチコンテンツ、背景色、URLなど、ブロックが保存するデータに関する情報を保持します。
+
+attributesオブジェクト内には、キーと値のペアで任意の数の属性を設定できます。キーは属性名、値は属性定義です。
+
+block.jsonファイルを開き、以下のattributesプロパティを追加します。
+
+```json
+"attributes": {
+	"content": {
+		"type": "string",
+		"source": "html",
+		"selector": "p"
+	}
+},
+```
+
+content属性は、編集可能フィールドに入力されたテキストを格納できます。
+
+- typeは、属性によって保存されるデータの種類を示します。このプロパティは、enumプロパティを定義しない限り必須です。
+- sourceは、投稿のコンテンツから、どのように属性値を抽出するかを定義します。この例では、HTMLコンテンツです。注意）このプロパティを指定しなければ、データはブロックデリミタに格納されます（詳細はこちら）。
+- selectorは、HTMLタグ、またはクラス名やid属性などのその他のセレクタです。
+- Edit関数には、プロパティのオブジェクトを渡します。edit.jsファイルに戻り、以下のように変更してください。
+
+```jsx
+export default function Edit( { attributes, setAttributes } ) { ... }
+```
+
+### ステップ4. イベントハンドラを定義する
+
+RichText要素にはonChange属性があり、要素の内容が変更されたときに呼び出される関数を指定します。
+
+以下は、この関数を定義したedit.jsスクリプトの全文です。
+
+```jsx
+import { __ } from '@wordpress/i18n';
+import { useBlockProps, RichText } from '@wordpress/block-editor';
+import './editor.scss';
+
+export default function Edit( { attributes, setAttributes } ) {
+	const blockProps = useBlockProps();
+
+	const onChangeContent = ( newContent ) => {
+		setAttributes( { content: newContent } )
+	}
+
+	return (
+		<RichText 
+			{ ...blockProps }
+			tagName="p"
+			onChange={ onChangeContent }
+			allowedFormats={ [ 'core/bold', 'core/italic' ] }
+			value={ attributes.content }
+			placeholder={ __( 'Write your text...' ) }
+		/>
+	);
+}
+```
+
+useBlockProps は WordPress のブロックエディタ（Gutenberg）で使用される React フックです。このフックは、ブロックに必要な属性やイベントハンドラを提供し、ブロックの編集インターフェースを適切に機能させるために重要な役割を果たします。
+主な特徴と機能：
+
+1. 標準属性の提供：
+ブロックに必要な標準的な属性（クラス名、ID など）を自動的に追加します。
+2. イベントハンドラの追加：
+ブロックの選択、フォーカス、ドラッグアンドドロップなどの操作に必要なイベントハンドラを提供します。
+3. スタイルの適用：
+ブロックエディタ内でのブロックの表示に必要なスタイルを適用します。
+4. アクセシビリティの向上：
+ARIA 属性などのアクセシビリティ関連の属性を自動的に追加します。
+5. ブロック型の識別：
+ブロックの種類を識別するための属性を追加します。
+
+ファイルを保存して、ターミナルウィンドウでnpm run startを実行します。WordPressの管理画面に戻り、新規投稿または固定ページを作成し、Kinsta Academyブロックを追加します。
+
+テキストを入力して、コードビューに切り替えます。コードは以下のようになります。
+
+```jsx
+<!-- wp:ka-example-block/ka-example-block -->
+<p class="wp-block-ka-example-block-ka-example-block">Kinsta Academy Block – hello from the saved content!</p>
+<!-- /wp:ka-example-block/ka-example-block -->
+```
+
+ここでページを保存してフロントエンドの表示をチェックしても、残念なことに変更はサイトに反映されていません。save.jsファイルを修正して、投稿を保存する際、データベースに入力を保存する必要があります。
+
+### ステップ5. データを保存する
+save.jsファイルを開き、スクリプトを次のように変更します。
+
+```jsx
+import { __ } from '@wordpress/i18n';
+import { useBlockProps, RichText } from '@wordpress/block-editor';
+
+export default function save( { attributes } ) {
+	const blockProps = useBlockProps.save();
+	return (
+		<RichText.Content 
+			{ ...blockProps } 
+			tagName="p" 
+			value={ attributes.content } 
+		/>
+	);
+}
+```
+
+ここでは以下を実行しています。
+
+- block-editorパッケージからRichTextコンポーネントをインポートする
+- save関数にオブジェクト引数を介して複数のプロパティを渡す（この例ではattributesプロパティのみを渡しています）
+- RichTextコンポーネントのコンテンツを返す
+
+Important
+
+save関数を変更するたびに、エディターキャンバスのブロックインスタンスを削除し、再度インクルードする必要があります。詳細についてはこのページの「妥当性検証」セクションをご覧ください。
+
+RichTextコンポーネントの詳細については、ブロックエディターハンドブック、プロパティの一覧については、Githubを参照してください。
+
+次は、ブロックツールバーにコントロールを追加します。
+
+## ブロックツールバーへのコントロールの追加
+
+ブロックツールバーには、ブロックコンテンツの一部を操作できるコントロールが並びます。各ツールバーコントロールには、コンポーネントがあります。
+
+例えば、ブロックにはテキスト配置コントロールを追加できます。必要な作業は、@wordpress/block-editorパッケージから2つのコンポーネントをインポートするだけです。
+
+前の例と同じ手順で進めていきます。
+
+- WordPressパッケージから必要なコンポーネントをインポートする
+- JSXコードに対応する要素を追加する
+- block.jsonファイルに必要な属性を定義する
+- イベントハンドラを定義する
+- データを保存する
+
+### ステップ1. @wordpress/block-editorからBlockControlsとAlignmentControlコンポーネントをインポートする
+
+ブロックツールバーに配置コントロールを追加するには、2つのコンポーネントが必要です。
+
+- BlockControlsは、コントロールの動的ツールバーをレンダリングします（ドキュメントなし）。
+- AlignmentControlは、選択されたブロックの整列方法を表示するドロップダウンメニューをレンダリングします（詳細についてはこちら）。
+
+edit.jsを開き、以下のようにimport文を編集します。
+
+```jsx
+import { 
+	useBlockProps, 
+	RichText, 
+	AlignmentControl, 
+	BlockControls 
+} from '@wordpress/block-editor';
+```
+
+### ステップ2. BlockControlsとAlignmentControl要素を追加する
+
+Edit関数に移動し、<BlockControls />要素を<RichText />と同じレベルで挿入します。次に、<BlockControls />の中に<AlignmentControl />を追加します。
+
+```jsx
+export default function Edit( { attributes, setAttributes } ) {
+	const blockProps = useBlockProps();
+	return (
+		<>
+			<BlockControls>
+				<AlignmentControl
+					value={ attributes.align }
+					onChange={ onChangeAlign }
+				/>
+			</BlockControls>
+			<RichText 
+				{ ...blockProps }
+				tagName="p"
+				onChange={ onChangeContent }
+				allowedFormats={ [ 'core/bold', 'core/italic' ] }
+				value={ attributes.content }
+				placeholder={ __( 'Write your text...' ) }
+				style={ { textAlign: attributes.align } }
+			/>
+		</>
+	);
+}
+```
+
+上のコードで<>と</>は、Reactで複数の要素を返す「フラグメント」を宣言する短い記法です。
+
+この例では、AlignmentControlに2つの属性があります。
+
+- valueは、この要素の現在の値を表します
+- onChangeは、値が変更されたときに実行するイベントハンドラを指定します
+
+また、RichText要素に追加の属性も定義しています（例付きの属性の一覧についてはこちら）。
+
+### ステップ3. block.jsonにalgin属性を定義する
+
+block.jsonファイルに移動して、align属性を追加します。
+
+```json
+"align": {
+	"type": "string",
+	"default": "none"
+}
+```
+
+ブロックエディターに戻り、ページを更新してブロックを選択します。ブロックツールバーに、配置コントロールが表示されるはずです。
+
+これは、まだイベントハンドラを定義していないのが原因です。
+
+### ステップ4. イベントハンドラを定義する
+次に、onChangeAlignを以下のように定義します。
+
+```jsx
+const onChangeAlign = ( newAlign ) => {
+	setAttributes( { 
+		align: newAlign === undefined ? 'none' : newAlign, 
+	} )
+}
+```
+
+newAlignがundefinedであれば、noneに設定し、そうでなければ、newAlignを使用します。
+
+これで、edit.jsスクリプトは（一旦）完了です。
+
+```jsx
+export default function Edit( { attributes, setAttributes } ) {
+	const blockProps = useBlockProps();
+	const onChangeContent = ( newContent ) => {
+		setAttributes( { content: newContent } )
+	}
+	const onChangeAlign = ( newAlign ) => {
+		setAttributes( { 
+			align: newAlign === undefined ? 'none' : newAlign, 
+		} )
+	}
+	return (
+		<>
+			<BlockControls>
+				<AlignmentControl
+					value={ attributes.align }
+					onChange={ onChangeAlign }
+				/>
+			</BlockControls>
+			<RichText 
+				{ ...blockProps }
+				tagName="p"
+				onChange={ onChangeContent }
+				allowedFormats={ [ 'core/bold', 'core/italic' ] }
+				value={ attributes.content }
+				placeholder={ __( 'Write your text...' ) }
+				style={ { textAlign: attributes.align } }
+			/>
+		</>
+	);
+}
+```
+
+これでエディターに戻って、ブロックのコンテンツを配置することができます。ブロックに配置ツールバーが表示されているはずです。
+
+なお、投稿を保存すると、ブロックのコンテンツがブロックエディターで表示されるようにフロントエンドで配置されないことがあります。この場合、save関数を修正して、ブロックのコンテンツと属性をデータベースに保存する必要があります。
+
+### ステップ5. データを保存する
+
+save.jsを開き、save関数を以下のように変更してください。
+
+```jsx
+export default function save( { attributes } ) {
+	const blockProps = useBlockProps.save();
+	return (
+		<RichText.Content 
+			{ ...blockProps } 
+			tagName="p" 
+			value={ attributes.content } 
+			style={ { textAlign: attributes.align } }
+		/>
+	);
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
