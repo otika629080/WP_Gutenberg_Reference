@@ -197,7 +197,7 @@ block.jsonファイルについてはこの記事の後半で詳しくご説明�
 ### index.js
 index.jsファイルは出発点です。依存関係をインポートし、ブロックタイプをクライアントに登録します。
 
-```json
+```jsx
 import { registerBlockType } from '@wordpress/blocks';
 
 import './style.scss';
@@ -229,7 +229,7 @@ Edit関数はブロックエディターで描画されるブロックインタ�
 
 edit.jsでは、ブロック管理インターフェースを構築します。
 
-```js
+```jsx
 import { __ } from '@wordpress/i18n';
 import { useBlockProps } from '@wordpress/block-editor';
 import './editor.scss';
@@ -777,106 +777,473 @@ export default function save( { attributes } ) {
 }
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+最後に、分割代入構文を使用して、attributeオブジェクトから個々のプロパティを抽出し、コードを整理しましょう。
+
+```jsx
+export default function save( { attributes } ) {
+	const blockProps = useBlockProps.save();
+	const { content, align } = attributes;
+	return (
+		<RichText.Content 
+			{ ...blockProps } 
+			tagName="p" 
+			value={ content } 
+			style={ { textAlign: align } }
+		/>
+	);
+}
+```
+
+edit.jsファイルでも同じことができます。
+
+ファイルを保存して、コードエディターモードでエディターに戻ります。コードは以下のようになるはずです。
+
+```jsx
+<!-- wp:ka-example-block/ka-example-block {"align":"right"} -->
+<p class="wp-block-ka-example-block-ka-example-block" style="text-align:right">This is my first editable <strong>Gutenberg</strong> <em>block</em> 😎</p>
+<!-- /wp:ka-example-block/ka-example-block -->
+```
+
+これで完了です。ブロックツールバーに配置コントロールを追加できました🤓
+
+ブロックツールバーコントロールの詳細については、ブロックエディターハンドブックの「ブロックツールバーと設定サイドバー」を参照してください。
+
+## ブロック設定サイドバーの編集
+
+コントロールは、ブロック設定サイドバーにも追加できます（アプリケーション用に新規サイドバーを作成することも）。
+
+APIとしては、InspectorControlsコンポーネントがあります。
+
+ブロックエディターハンドブックで、設定サイドバーの使い方を以下のように説明しています。
+
+設定サイドバーは、あまり使わない設定や、大きな画面スペースが必要な設定で使用されます。設定サイドバーはブロックレベル設定でのみ使用してください。
+
+ブロック内の選択したコンテンツでのみ有効な設定は（例：段落内の選択したテキストに対する「太字」設定）、設定サイドバーの中に置かないでください。設定サイドバーはHTMLモードでブロックを編集するときにも表示されるため、ブロックレベルの設定のみを配置する必要があります。
+
+再び、同じ手順で進めます。
+
+- WordPressパッケージから必要なコンポーネントをインポートする
+- JSXコードに対応する要素を追加する
+- block.jsonファイルに必要な属性を定義する
+- イベントハンドラを定義する
+- データを保存する
+
+### ステップ1. @wordpress/block-editorからInspectorControlsとPanelColorSettingsコンポーネントをインポートする
+
+ブロックの特定部分をカスタマイズできるようにするには、必要なコントロールを追加します。例えば、カラーコントロールパネルを実装するには、block-editorモジュールからInspectorControlsとPanelColorSettingsコンポーネントをインポートします。
+
+```jsx
+import { 
+	useBlockProps, 
+	RichText, 
+	AlignmentControl, 
+	BlockControls,
+	InspectorControls,
+	PanelColorSettings
+} from '@wordpress/block-editor';
+```
+
+### ステップ2. JSXコードに対応する要素を追加する
+
+次に、Edit関数が返すJSXに、対応する要素を追加します。
+
+```jsx
+export default function Edit( { attributes, setAttributes } ) {
+	const blockProps = useBlockProps();
+
+	const { content, align, backgroundColor, textColor } = attributes;
+
+	const onChangeContent = ( newContent ) => {
+		setAttributes( { content: newContent } )
+	}
+	const onChangeAlign = ( newAlign ) => {
+		setAttributes( { 
+			align: newAlign === undefined ? 'none' : newAlign, 
+		} )
+	}
+	return (
+		<>
+			<InspectorControls>
+				<PanelColorSettings 
+					title={ __( 'Color settings', 'ka-example-block' ) }
+					initialOpen={ false }
+					colorSettings={ [
+						{
+						  value: textColor,
+						  onChange: onChangeTextColor,
+						  label: __( 'Text color', 'ka-example-block' )
+						},
+						{
+						  value: backgroundColor,
+						  onChange: onChangeBackgroundColor,
+						  label: __( 'Background color', 'ka-example-block' )
+						}
+					] }
+				/>
+			</InspectorControls>
+			<BlockControls>
+				<AlignmentControl
+					value={ align }
+					onChange={ onChangeAlign }
+				/>
+			</BlockControls>
+			<RichText 
+				{ ...blockProps }
+				tagName="p"
+				onChange={ onChangeContent }
+				allowedFormats={ [ 'core/bold', 'core/italic' ] }
+				value={ content }
+				placeholder={ __( 'Write your text...' ) }
+				style={ { textAlign: align, backgroundColor: backgroundColor, color: textColor } }
+			/>
+		</>
+	);
+}
+```
+
+なお、RichText要素のstyle属性も更新します。
+
+```jsx
+<RichText 
+	 { ...blockProps }
+	 tagName="p"
+	 onChange={ onChangeContent }
+	 allowedFormats={ [ 'core/bold', 'core/italic' ] }
+	 value={ content }
+	 placeholder={ __( 'Write your text...' ) }
+	 style={ { textAlign: align, backgroundColor: backgroundColor, color: textColor } }
+/>
+```
+
+ステップ3. block.jsonに必要な属性を定義する
+ここで、block.jsonファイルにbackgroundColorとtextColor属性を定義します。
+
+```jsx
+"attributes": {
+	"content": {
+		"type": "string",
+		"source": "html",
+		"selector": "p"
+	},
+	"align": {
+		"type": "string",
+		"default": "none"
+	},
+	"backgroundColor": {
+		"type": "string"
+	},	 
+	"textColor": {
+		"type": "string"
+	}
+},
+```
+
+### ステップ4. イベントハンドラを定義する
+
+次に、入力に応じてbackgroundColorとtextColorを更新する2つの関数を定義します。
+
+```jsx
+const onChangeBackgroundColor = ( newBackgroundColor ) => {
+	setAttributes( { backgroundColor: newBackgroundColor } )
+}
+
+const onChangeTextColor = ( newTextColor ) => {
+	setAttributes( { textColor: newTextColor } )
+}
+```
+
+### ステップ5. データを保存する
+
+最後にsave.jsファイルを開き、スクリプトを以下のように変更します。
+
+```jsx
+export default function save( { attributes } ) {
+	const blockProps = useBlockProps.save();
+	const { content, align, backgroundColor, textColor } = attributes;
+	return (
+		<RichText.Content 
+			{ ...blockProps } 
+			tagName="p" 
+			value={ content } 
+			style={ { textAlign: align, backgroundColor: backgroundColor, color: textColor } }
+		/>
+	);
+}
+```
+
+ファイルを保存して、エディターでブロックを確認します。ブロックに予期せぬ、または無効なコンテンツが含まれていることを知らせるエラーメッセージが表示される場合があります。
+
+このエラーは、save.jsファイルが変更され、データベースに保存されたコードがエディターで使用されているコードと一致しない時に発生します。
+
+これを修正するには、ページを更新し、ブロックのインスタンスを一度削除して、再度投稿に追加してください。
+
+変更を加え、投稿を保存して、フロントエンドで表示します。ブロックエディターで行った変更が、サイトにも反映されているはずです。
+
+### 外部リンクの追加と編集
+次に、ブロックタイプに新しいコンポーネントを追加します。
+
+- カスタムブロックにカスタマイズ可能なリンクを追加できるようにするExternalLinkコンポーネント
+- リンクの設定をカスタマイズできる複数のサイドバーコントロール
+
+#### ステップ1. @wordpress/componentsからコンポーネントをインストールする
+
+@wordpress/componentsから複数のコンポーネントをインポートする必要があります。edit.jsを開き、以下のimport文を追加してください。
+
+```jsx
+import {
+	TextControl,
+	PanelBody,
+	PanelRow,
+	ToggleControl,
+	ExternalLink
+} from '@wordpress/components';
+```
+
+- PanelBody：設定サイドバーに折りたたみ可能なコンテナを追加
+- PaneRow：サイドバーコントロール用の汎用コンテナを生成
+- TextControl：テキスト入力用のコントロール
+- ToggleControl：特定のオプションの有効・無効を切り替えられるトグル用コントロール
+- ExternalLink：外部リンクを追加するシンプルなコンポーネント
+
+#### ステップ2. JSXコードに対応する要素を追加する
+
+まず、divコンテナ内に、RichTextと同じレベルでExternalLink要素を追加します。
+
+```jsx
+<div { ...blockProps }>
+	<RichText 
+		...
+	/>
+	<ExternalLink 
+		href={ kaLink }
+		className="ka-button"
+		rel={ hasLinkNofollow ? "nofollow" : "" }
+	>
+			{ linkLabel }
+	</ExternalLink>
+
+</div>
+```
+
+なお、ExternalLinkコンポーネントはドキュメント化されていないため、コンポーネントのソースコードを参照して利用可能な属性の一覧を取得しました。ここでは、href、className、rel属性を使用しています。
+
+デフォルトでは、rel属性の値はnoopener noreferrerに設定されます。このコードでは、トグルコントロールがオンのとき、結果のaタグのrel属性にnofollowキーワードが追加されます。
+
+ブロックサイドバーにリンク設定を追加します。まず、InspectorControls内に、PanelColorSettingsと同じレベルでPanelBody要素を追加します。
+
+```jsx
+<InspectorControls>
+	<PanelColorSettings 
+	...
+	/>
+	<PanelBody 
+		title={ __( 'Link Settings' )}
+		initialOpen={true}
+	>
+	...
+	</PanelBody>
+</InspectorControls>
+```
+
+今回は、以下を実行しています。
+
+- title属性でパネルのタイトルを指定
+- initialOpenで初期状態でパネルが開いているかどうかを設定
+  
+次に、PanelBodyの中に2つのPanelRow要素を追加し、それぞれのPanelRowの中にTextControl要素を追加します。
+
+```jsx
+<PanelBody 
+	title={ __( 'Link Settings', 'ka-example-block' )}
+	initialOpen={true}
+>
+	<PanelRow>
+		<fieldset>
+			<TextControl
+				label={__( 'KA link', 'ka-example-block' )}
+				value={ kaLink }
+				onChange={ onChangeKaLink }
+				help={ __( 'Add your Academy link', 'ka-example-block' )}
+			/>
+		</fieldset>
+	</PanelRow>
+	<PanelRow>
+		<fieldset>
+			<TextControl
+				label={__( 'Link label', 'ka-example-block' )}
+				value={ linkLabel }
+				onChange={ onChangeLinkLabel }
+				help={ __( 'Add link label', 'ka-example-block' )}
+			/>
+		</fieldset>
+	</PanelRow>
+</PanelBody>
+```
+
+上のコードは、もうかなり簡単に思えるはず。それから、2つのテキストコントロールにリンクラベルとURLを設定します。
+
+さらに、ToggleControlを含むPanelRowを追加して、属性を含めるかどうかなど、特定のオプションの有効、無効を切り替えられるようにします。
+
+```jsx
+<PanelRow>
+	<fieldset>
+		<ToggleControl
+			label="Add rel = nofollow"
+			help={
+				hasLinkNofollow
+					? 'Has rel nofollow.'
+					: 'No rel nofollow.'
+			}
+			checked={ hasLinkNofollow }
+			onChange={ toggleNofollow }
+		/>
+	</fieldset>
+</PanelRow>
+```
+
+#### ステップ3. block.jsonに必要な属性を定義する
+
+block.jsonファイルにkaLink、linkLabel、hasLinkNofollow属性を定義します。
+
+```jsx
+"kaLink": {
+	"type": "string",
+	"default": ""
+},
+"linkLabel": {
+	"type": "string",
+	"default": "Check it out!"
+},
+"hasLinkNofollow": {
+	"type": "boolean",
+	"default": false
+}
+```
+
+これ以上、何かを追加する必要はありません。イベントハンドラ関数の定義に移りましょう。
+
+#### ステップ4. イベントハンドラを定義する
+
+```jsx
+const { content, align, backgroundColor, textColor, kaLink, linkLabel, hasLinkNofollow } = attributes;
+
+const onChangeKaLink = ( newKaLink ) => {
+	setAttributes( { kaLink: newKaLink === undefined ? '' : newKaLink } )
+}
+
+const onChangeLinkLabel = ( newLinkLabel ) => {
+	setAttributes( { linkLabel: newLinkLabel === undefined ? '' : newLinkLabel } )
+}
+
+const toggleNofollow = () => {
+	setAttributes( { hasLinkNofollow: ! hasLinkNofollow } )
+}
+```
+
+この関数は、入力に対応する属性値を更新します。
+
+#### ステップ5. データを保存する
+
+最後に、save.jsのsave関数を更新します。
+
+```jsx
+export default function save( { attributes } ) {
+	
+	const { content, align, backgroundColor, textColor, kaLink, linkLabel, hasLinkNofollow } = attributes;
+
+	const blockProps = useBlockProps.save( {
+		className: `has-text-align-${ align }`
+	} );
+	
+	return (
+		<div 
+			{ ...blockProps }
+			style={ { backgroundColor: backgroundColor } }
+		>
+			<RichText.Content 
+				tagName="p" 
+				value={ content } 
+				style={ { color: textColor } }
+			/>
+			<p>
+				<a 
+					href={ kaLink }
+					className="ka-button"
+					rel={ hasLinkNofollow ? "nofollow" : "noopener noreferrer" }
+				>
+					{ linkLabel }
+				</a>
+			</p>
+		</div>
+	);
+}
+```
+
+なお、今回の例では、ExternalLinkの代わりに、通常のa要素を使用しています。
+
+結果は以下のようになります。
+
+### 複数のブロックスタイルの追加
+
+前のセクションでは、テキストの配置を設定できる、ブロックツールバーコントロールの追加方法について学びました。同じ手順でブロックツールバーにさらにスタイルコントロールを追加できますが、ワンクリックで選択できる、定義済みのブロックスタイルを追加する方法もあります。
+
+これにはブロックAPIの便利な機能ブロックスタイルを使用します。
+
+block.jsonのstylesプロパティを定義して、対応するスタイルをスタイルシートで宣言します。
+
+例えば、次のようなスタイルの配列を追加できます。
+
+```json
+"styles": [
+	{
+		"name": "default",
+		"label": "Default",
+		"isDefault": true
+	},
+	{
+		"name": "border",
+		"label": "Border"
+	}
+],
+```
+
+これで、デフォルトのスタイルと、border（枠）と呼ばれるスタイルが追加されました。ブロックエディターに戻ります。
+
+スタイルは、ブロックスイッチャーをクリックし、ブロック設定サイドバーの「スタイル」パネルから利用できます。
+
+スタイルを選択し、p要素に適用されるクラスを確認します。ブロック上で右クリックして、「検証」を選択してください。次の形式の名前の新しいクラスが追加されています。
+
+```html
+is-style-{style-name}
+```
+
+「Border」スタイルを選択すると、p要素にis-style-borderクラスが追加されます。「Default」スタイルを選択すると、代わりにis-style-defaultクラスが追加されます。
+
+あとは、CSSのプロパティを宣言するだけです。editor.scssを開き、現在のスタイルを以下のように置き換えます。
+
+```css
+.wp-block-ka-example-block-ka-example-block {
+    padding: 4px;
+}
+```
+
+次に、style.scssにも同様に追加します。前述したように、style.scssで定義されたスタイルは、フロントエンドとエディターの両方に適用されます。
+
+```css
+.wp-block-ka-example-block-ka-example-block {
+	&.is-style-default{
+		border: 0;
+        background-color: #FFE2C7;
+	}
+	&.is-style-border{
+		border: 2px solid #000;
+        border-radius: 16px;
+        background-color: #F6F6F6;
+	}
+}
+```
+
+これで完了です。ページを更新して、新たなブロックスタイルをお楽しみください。
 
 
 
